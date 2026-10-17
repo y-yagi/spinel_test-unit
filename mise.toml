@@ -1,0 +1,14 @@
+# The tools for developing spinel_test-unit; `bin/setup` installs them.
+#
+# To use a Spinel checkout instead, point SPINEL at it in a
+# mise.local.toml (git-ignored); SPINEL wins over spinel on PATH:
+#
+#   [env]
+#   SPINEL = "{{ env.HOME }}/src/github.com/matz/spinel/spinel"
+
+[plugins]
+spinel = "https://github.com/y-yagi/mise-spinel"
+
+[tools]
+# A commit of matz/spinel (mise-spinel builds any git ref from source).
+spinel = { version = "b5204b507" }
