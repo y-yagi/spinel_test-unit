@@ -218,7 +218,7 @@ module SpinelTest
       end
 
       def compile(spinel, main, bin, entries)
-        cmd = [spinel] + include_dirs(entries).flat_map { |d| ["-I", d] } + [main, "-o", bin]
+        cmd = [spinel] + Toolchain.compile_flags + include_dirs(entries).flat_map { |d| ["-I", d] } + [main, "-o", bin]
         output, status = Open3.capture2e(*cmd)
         unless status.success?
           warn output unless output.empty?
