@@ -62,6 +62,13 @@ Available assertions:
 
 `setup` and `teardown` hooks are supported.
 
+## Compile speed
+
+The tests are compiled for build speed, not run speed: with `-O0`, and the generated C split into parallel units (Spinel's `--jobs`). Most of a Spinel build is the C compile, so this cuts it several times over. Two environment variables change it:
+
+- `SPINEL_TEST_UNIT_OPT` -- the C optimization level (default `0`). Set `2` to test the binary the way a release build compiles it.
+- `SPINEL_TEST_UNIT_JOBS` -- how many units the C is compiled as (default: the number of CPUs, up to 16). `1` compiles it as a single unit. The CPUs counted are the ones the process may use: a cgroup CPU quota (a container started with `--cpus`, for example) counts, not only the host's cores.
+
 ## Constraints (from Spinel)
 
 - Test code must be compilable by Spinel: no `send` with dynamic names,
