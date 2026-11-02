@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 0.1.2
+
 * Exclude mise.toml from the gem
 
 ## 0.1.1
