@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Exclude mise.toml from the gem
+
 ## 0.1.1
 
 * Allow to configure Spinel compile options
