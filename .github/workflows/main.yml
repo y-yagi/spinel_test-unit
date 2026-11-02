@@ -16,6 +16,8 @@ jobs:
     name: Ruby ${{ matrix.ruby }}
     timeout-minutes: 10
     strategy:
+      # Keep the other Rubies running (and caching Spinel) if one fails.
+      fail-fast: false
       matrix:
         ruby:
           - '3.2'
@@ -31,6 +33,11 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      # Spinel's build runs `require "prism"` with plain ruby; prism is a
+      # default gem only since Ruby 3.3.
+      - name: Install prism
+        if: matrix.ruby == '3.2'
+        run: gem install prism
       # Spinel from mise.toml (the mise-spinel plugin).
       - name: Install Spinel
         uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
