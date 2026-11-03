@@ -314,4 +314,17 @@ class CLITest < Test::Unit::TestCase
       assert_false out.include?("tests,")
     end
   end
+
+  def test_new_assertion_messages
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "ReportTest")
+    assert_include out, "9 tests, 16 assertions, 8 failures, 0 errors"
+    assert_include out, "Expected /a/ to match nil\n"
+    assert_include out, "Expected /b+z/ to match \"abc\"\n"
+    assert_include out, "Expected \"xyz\" to match \"abc\"\n"
+    assert_include out, "Expected 1 not to equal 1\n"
+    assert_include out, "Expected a value other than nil\n"
+    assert_include out, "[1, 2] includes 2\n"
+    assert_include out, "Failed refutation, no message given.\n"
+    assert_include out, "Failure: ReportTest#test_refute_message_fail\nshould differ\n"
+  end
 end

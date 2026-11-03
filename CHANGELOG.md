@@ -1,5 +1,6 @@
 ## Unreleased
 
+* Add `assert_match`, `assert_not_equal`, `assert_not_nil`, `assert_include`, `assert_not_include` and `refute`. `assert_includes` remains as an alias of `assert_include`
 * Add `--ruby` to run the tests with the current Ruby instead of compiling them with Spinel
 
 ## 0.1.2

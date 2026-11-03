@@ -165,4 +165,75 @@ class RuntimeCaseTest < Test::Unit::TestCase
   ensure
     $stdout = STDOUT
   end
+
+  def failure_message
+    yield
+    nil
+  rescue SpinelTest::Unit::AssertionFailedError => e
+    e.message
+  end
+
+  def test_assert_match
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_match(/b+/, "abbc")
+    assert_true tc.assert_match("bc", "abbc")
+    assert_equal 2, tc.assertions
+    assert_equal "Expected /x/ to match \"abc\"", failure_message { tc.assert_match(/x/, "abc") }
+    assert_equal "Expected \"x\" to match \"abc\"", failure_message { tc.assert_match("x", "abc") }
+    assert_equal "hi\nExpected /x/ to match \"abc\"", failure_message { tc.assert_match(/x/, "abc", "hi") }
+  end
+
+  def test_assert_not_equal
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_not_equal(1, 2)
+    assert_equal "Expected 1 not to equal 1", failure_message { tc.assert_not_equal(1, 1) }
+    assert_equal "hi\nExpected 1 not to equal 1", failure_message { tc.assert_not_equal(1, 1, "hi") }
+    assert_equal 3, tc.assertions
+  end
+
+  def test_assert_not_nil
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_not_nil(false)
+    assert_equal "Expected a value other than nil", failure_message { tc.assert_not_nil(nil) }
+    assert_equal "hi\nExpected a value other than nil", failure_message { tc.assert_not_nil(nil, "hi") }
+    assert_equal 3, tc.assertions
+  end
+
+  def test_assert_include
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_include([1], 1)
+    assert_equal "[1] does not include 2", failure_message { tc.assert_include([1], 2) }
+    assert_equal "hi\n[1] does not include 2", failure_message { tc.assert_include([1], 2, "hi") }
+    assert_equal 3, tc.assertions
+  end
+
+  def test_assert_includes_is_an_alias_of_assert_include
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_includes([1], 1)
+    assert_equal "[1] does not include 2", failure_message { tc.assert_includes([1], 2) }
+    assert_equal 2, tc.assertions
+  end
+
+  def test_assert_not_include
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.assert_not_include([1], 2)
+    assert_equal "[1, 2] includes 2", failure_message { tc.assert_not_include([1, 2], 2) }
+    assert_equal "hi\n[1, 2] includes 2", failure_message { tc.assert_not_include([1, 2], 2, "hi") }
+    assert_equal 3, tc.assertions
+  end
+
+  def test_refute
+    tc = SpinelTest::Unit::TestCase.new
+    assert_true tc.refute(nil)
+    assert_equal "Failed refutation, no message given.", failure_message { tc.refute(true) }
+    assert_equal "hi", failure_message { tc.refute(1, "hi") }
+    assert_equal 3, tc.assertions
+  end
+
+  def test_assert_match_fails_for_a_subject_that_is_not_a_string
+    tc = SpinelTest::Unit::TestCase.new
+    assert_equal "Expected /a/ to match nil", failure_message { tc.assert_match(/a/, nil) }
+    assert_equal "Expected \"a\" to match nil", failure_message { tc.assert_match("a", nil) }
+    assert_equal "Expected /1/ to match 1", failure_message { tc.assert_match(/1/, 1) }
+  end
 end
