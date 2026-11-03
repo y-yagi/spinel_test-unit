@@ -39,7 +39,10 @@ end
 $ bundle exec spinel_test-unit                 # test/**/*_test.rb and test/**/test_*.rb
 $ bundle exec spinel_test-unit test/calc_test.rb
 $ bundle exec spinel_test-unit -n test_add     # only tests whose "Class#method" name includes it
+$ bundle exec spinel_test-unit --ruby          # run the same tests with the current Ruby, no Spinel needed
 ```
+
+`--ruby` runs the generated main.rb with the Ruby that runs the CLI, with the same load paths (`-I`, `lib`, `test`, the project root) instead of compiling it; the child also inherits `RUBYOPT` and `RUBYLIB` (e.g. `bundler/setup`), so it may resolve requires that Spinel cannot. Use it to check that code which must work under both CRuby and Spinel behaves the same in each. The same tests run, with the same report format and exit status convention, but results can differ where CRuby and Spinel differ: Spinel freezes string literals (so `s = "a"; s << "b"` raises under Spinel but passes under `--ruby`), and exception messages can be worded differently.
 
 Output:
 

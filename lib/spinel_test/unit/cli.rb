@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "open3"
+require "rbconfig"
 require "tmpdir"
 require_relative "scanner"
 require_relative "generator"
@@ -9,10 +10,12 @@ require_relative "toolchain"
 
 module SpinelTest
   module Unit
-    # spinel_test-unit [PATH...] [-n NAME]
+    # spinel_test-unit [PATH...] [-n NAME] [-I DIR] [--ruby]
     #
     # Scans the test files with Prism, generates a main.rb that calls every
-    # test, compiles it with Spinel and runs the binary.
+    # test, compiles it with Spinel and runs the binary. With --ruby it runs the
+    # generated main.rb with the current Ruby instead, so one test file can be
+    # checked under both.
     class CLI
       def self.start(argv, root: Dir.pwd)
         new(argv, root: root).run
@@ -23,19 +26,22 @@ module SpinelTest
         @paths = []
         @filter = nil
         @keep = false
+        @ruby = false
         @includes = []
         @exit = nil
         parse(argv.dup)
       end
 
       USAGE = <<~TEXT
-        Usage: spinel_test-unit [PATH...] [-n NAME] [-I DIR]
+        Usage: spinel_test-unit [PATH...] [-n NAME] [-I DIR] [--ruby]
 
-        Compiles the tests with Spinel and runs them.
+        Compiles the tests with Spinel and runs them (with --ruby, runs them with the
+        current Ruby instead).
 
           PATH             test file or directory (default: test)
           -n, --name NAME  run only the tests whose "Class#test_name" includes NAME
-          -I DIR           add DIR to Spinel's load path (repeatable)
+          -I DIR           add DIR to the load path (repeatable)
+          --ruby           run with the current Ruby instead of compiling with Spinel
           -h, --help       show this help
       TEXT
 
@@ -48,10 +54,9 @@ module SpinelTest
           return 1
         end
 
-        spinel = Toolchain.spinel
-        unless spinel
-          warn "spinel_test-unit: Spinel not found (set SPINEL, put spinel on PATH, or install it with mise)"
-          return 1
+        unless @ruby
+          spinel = find_spinel
+          return 1 unless spinel
         end
 
         entries = build_entries(files)
@@ -62,16 +67,35 @@ module SpinelTest
 
         Dir.mktmpdir("spinel_test-unit") do |dir|
           main = File.join(dir, "main.rb")
-          bin = File.join(dir, "testbin")
           File.write(main, Generator.generate(entries))
-          return 1 unless compile(spinel, main, bin, entries)
-
-          args = @filter ? ["-n", @filter] : []
-          system(bin, *args) ? 0 : ($?.exitstatus || 1)
+          @ruby ? run_with_ruby(main, entries) : run_with_spinel(spinel, main, dir, entries)
         end
       end
 
       private
+
+      def find_spinel
+        spinel = Toolchain.spinel
+        warn "spinel_test-unit: Spinel not found (set SPINEL, put spinel on PATH, or install it with mise)" if spinel.nil?
+        spinel
+      end
+
+      def run_with_spinel(spinel, main, dir, entries)
+        bin = File.join(dir, "testbin")
+        return 1 unless compile(spinel, main, bin, entries)
+
+        run_command([bin])
+      end
+
+      def run_with_ruby(main, entries)
+        load_path = include_dirs(entries).flat_map { |dir| ["-I", dir] }
+        run_command([RbConfig.ruby] + load_path + [main])
+      end
+
+      def run_command(command)
+        args = @filter ? ["-n", @filter] : []
+        system(*command, *args) ? 0 : ($?.exitstatus || 1)
+      end
 
       def parse(args)
         until args.empty?
@@ -86,6 +110,7 @@ module SpinelTest
               return usage_error("#{arg} requires a value")
             end
             @filter = args.shift
+          when "--ruby" then @ruby = true
           when "-I"
             return usage_error("-I requires a value") if args.empty?
 
