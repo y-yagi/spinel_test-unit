@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Add `--ruby` to run the tests with the current Ruby instead of compiling them with Spinel
+
 ## 0.1.2
 
 * Exclude mise.toml from the gem
