@@ -173,6 +173,21 @@ class RuntimeCaseTest < Test::Unit::TestCase
     e.message
   end
 
+  def test_assert_equal_adds_a_diff_for_multiline_strings
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("a\nb", "a\nc") }
+    assert_equal "Expected: \"a\\nb\"\n  Actual: \"a\\nc\"\nDiff:\n  a\n- b\n+ c", message
+  end
+
+  def test_assert_equal_has_no_diff_for_single_line_strings
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("a", "b") }
+    assert_equal "Expected: \"a\"\n  Actual: \"b\"", message
+  end
+
+  def test_assert_equal_has_no_diff_when_only_one_side_is_multiline
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("a\nb", "a") }
+    assert_not_include message, "Diff:"
+  end
+
   def test_assert_match
     tc = SpinelTest::Unit::TestCase.new
     assert_true tc.assert_match(/b+/, "abbc")
@@ -235,5 +250,29 @@ class RuntimeCaseTest < Test::Unit::TestCase
     assert_equal "Expected /a/ to match nil", failure_message { tc.assert_match(/a/, nil) }
     assert_equal "Expected \"a\" to match nil", failure_message { tc.assert_match("a", nil) }
     assert_equal "Expected /1/ to match 1", failure_message { tc.assert_match(/1/, 1) }
+  end
+
+  def test_assert_equal_skips_the_diff_for_huge_differences
+    expected = (1..1200).map { |n| "e#{n}" }.join("\n")
+    actual = (1..1200).map { |n| "a#{n}" }.join("\n")
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal(expected, actual) }
+    assert_include message, "Diff:\n  (diff skipped: 1200 expected and 1200 actual lines differ)"
+  end
+
+  def test_assert_equal_puts_the_message_before_expected_actual_and_diff
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("a\nb", "a\nc", "custom") }
+    assert_equal "custom\nExpected: \"a\\nb\"\n  Actual: \"a\\nc\"\nDiff:\n  a\n- b\n+ c", message
+  end
+
+  def test_assert_equal_still_fails_without_a_diff_for_invalid_utf8
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("\xff\nb", "a\nb") }
+    assert_include message, "Expected:"
+    assert_not_include message, "Diff:"
+  end
+
+  def test_assert_equal_still_fails_without_a_diff_for_mixed_encodings
+    message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("é\nb".b, "é\nc") }
+    assert_include message, "Expected:"
+    assert_not_include message, "Diff:"
   end
 end
