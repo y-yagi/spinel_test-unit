@@ -59,8 +59,13 @@ Available assertions:
 
 - `assert(test, message = nil)`
 - `assert_equal(expected, actual, message = nil)`
+- `assert_not_equal(expected, actual, message = nil)`
 - `assert_nil(value, message = nil)`
-- `assert_includes(collection, item, message = nil)`
+- `assert_not_nil(value, message = nil)`
+- `assert_match(pattern, string, message = nil)` (`pattern` is a Regexp, or a String meaning a substring, and anything else is reported as an error; a `string` that is not a String, such as `nil`, fails)
+- `assert_include(collection, item, message = nil)` (`assert_includes` is an alias)
+- `assert_not_include(collection, item, message = nil)`
+- `refute(test, message = nil)`
 - `assert_raise(klass) { ... }` (passes for `klass` or a subclass; returns the exception; assertion failures raised inside the block propagate)
 
 `setup` and `teardown` hooks are supported.
@@ -86,6 +91,7 @@ The tests are compiled for build speed, not run speed: with `-O0`, and the gener
 - Files are loaded with `require` and the load paths `lib`, `test` and the
   project root; use `require "..."` / `require_relative` that Spinel resolves.
 - Test files under `fixtures/` directories (relative to the project root) are skipped unless named explicitly or the given directory is itself inside `fixtures/`.
+- A method parameter is typed from all of its call sites, so mixing a nil-typed local and, say, an Integer in calls to the same assertion can fail to compile or raise at run time under Spinel. For example, `refute 0` together with `n = nil; refute n` in the test files compiled together fails at run time ("nil can't be coerced into Integer") while `--ruby` passes. Keep the arguments of one assertion to one type across those files.
 - `ScriptError`s (such as `NotImplementedError`) raised by a test are reported as errors; a teardown error after a failure is appended to its message.
 
 ## Development

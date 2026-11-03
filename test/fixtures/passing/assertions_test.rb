@@ -14,7 +14,7 @@ class AssertionsTest < SpinelTest::Unit::TestCase
 
   def test_includes
     assert_includes [1, 2, 3], 2
-    assert_includes "hello", "ell"
+    assert_include "hello", "ell"
   end
 
   def test_raise
