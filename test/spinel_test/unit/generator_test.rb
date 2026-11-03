@@ -9,10 +9,19 @@ class GeneratorTest < Test::Unit::TestCase
 
     assert_include code, %(require "spinel_test/unit"\n)
     assert_include code, %(require "test/foo_test"\n)
-    assert_include code, %(runner.run("FooTest#test_a", t) { t.test_a }\n)
-    assert_include code, %(runner.run("FooTest#test_b", t) { t.test_b }\n)
+    assert_include code, %(runner.run("FooTest#test_a", t, "") { t.test_a }\n)
+    assert_include code, %(runner.run("FooTest#test_b", t, "") { t.test_b }\n)
     assert_include code, "t = FooTest.new\n"
     assert_match(/exit runner\.finish\n\z/, code)
+  end
+
+  def test_passes_the_test_location
+    klass = SpinelTest::Unit::Scanner::TestClass.new(
+      name: "FooTest", methods: ["test_a"], locations: { "test_a" => "test/foo_test.rb:4" }
+    )
+    code = SpinelTest::Unit::Generator.generate([{ require: "test/foo_test", classes: [klass] }])
+
+    assert_include code, %(runner.run("FooTest#test_a", t, "test/foo_test.rb:4") { t.test_a }\n)
   end
 
   def test_generated_code_is_valid_ruby

@@ -23,6 +23,15 @@ class ScannerTest < Test::Unit::TestCase
     assert_equal ["test_a", "test_b"], classes.first.methods
   end
 
+  def test_records_method_locations_per_file
+    sources = {
+      "base.rb" => "class BaseTest < SpinelTest::Unit::TestCase\n  def test_base; end\nend\n",
+      "sub.rb" => "class SubTest < BaseTest\n\n  def test_sub; end\nend\n"
+    }
+    result = SpinelTest::Unit::Scanner.scan_files(sources, ["sub.rb"])
+    assert_equal({ "test_base" => "base.rb:2", "test_sub" => "sub.rb:3" }, result.classes.first.locations)
+  end
+
   def test_nested_namespace
     classes = scan(<<~RUBY)
       module App
@@ -155,5 +164,37 @@ class ScannerTest < Test::Unit::TestCase
 
   def test_requires_returns_empty_for_unparseable_source
     assert_equal [], SpinelTest::Unit::Scanner.requires("require(")
+  end
+
+  def test_location_is_the_last_definition_of_a_method
+    sources = {
+      "a.rb" => "class FooTest < SpinelTest::Unit::TestCase\n  def test_x; end\n  def test_x; end\nend\n",
+      "b.rb" => "class FooTest\n\n\n  def test_x; end\nend\n"
+    }
+    result = SpinelTest::Unit::Scanner.scan_files(sources, ["a.rb", "b.rb"])
+    assert_equal ["test_x"], result.classes.first.methods
+    assert_equal({ "test_x" => "b.rb:4" }, result.classes.first.locations)
+  end
+
+  def test_location_of_a_method_defined_twice_in_one_class
+    sources = { "a.rb" => "class FooTest < SpinelTest::Unit::TestCase\n  def test_x; end\n  def test_x; end\nend\n" }
+    result = SpinelTest::Unit::Scanner.scan_files(sources, ["a.rb"])
+    assert_equal({ "test_x" => "a.rb:3" }, result.classes.first.locations)
+  end
+
+  def test_subclass_override_wins_the_location
+    sources = {
+      "base.rb" => "class BaseTest < SpinelTest::Unit::TestCase\n  def test_x; end\n  def test_y; end\nend\n",
+      "sub.rb" => "class SubTest < BaseTest\n  def test_x; end\nend\n"
+    }
+    result = SpinelTest::Unit::Scanner.scan_files(sources, ["sub.rb"])
+    assert_equal({ "test_x" => "sub.rb:2", "test_y" => "base.rb:3" }, result.classes.first.locations)
+  end
+
+  def test_locations_in_nested_namespaces
+    sources = { "n.rb" => "module A\n  module B\n    class CTest < SpinelTest::Unit::TestCase\n      def test_c; end\n    end\n  end\nend\n" }
+    result = SpinelTest::Unit::Scanner.scan_files(sources, ["n.rb"])
+    assert_equal "A::B::CTest", result.classes.first.name
+    assert_equal({ "test_c" => "n.rb:4" }, result.classes.first.locations)
   end
 end

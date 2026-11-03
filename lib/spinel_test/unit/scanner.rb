@@ -8,10 +8,10 @@ module SpinelTest
       VISIBILITY = %i[private protected public].freeze
       BASE_NAMES = ["SpinelTest::Unit::TestCase", "::SpinelTest::Unit::TestCase"].freeze
 
-      TestClass = Struct.new(:name, :methods, :file, :files, keyword_init: true)
+      TestClass = Struct.new(:name, :methods, :file, :files, :locations, keyword_init: true)
       # superclass is the raw name as written; scope is the lexical namespace it
       # was written in. Both are qualified in resolve, once every class is known.
-      ClassInfo = Struct.new(:name, :superclass, :methods, :files, :hidden, :scope)
+      ClassInfo = Struct.new(:name, :superclass, :methods, :files, :hidden, :scope, :locations)
       Result = Struct.new(:classes, :warnings, keyword_init: true)
 
       def self.scan(sources)
@@ -68,7 +68,7 @@ module SpinelTest
           visit(node.body, namespace + [path_name(node.constant_path)]) if node.body
         when Prism::ClassNode
           name = (namespace + [path_name(node.constant_path)]).join("::")
-          info = (@classes[name] ||= ClassInfo.new(name, nil, [], []))
+          info = (@classes[name] ||= ClassInfo.new(name, nil, [], [], nil, nil, {}))
           info.files << @file if @file && !info.files.include?(@file)
           if node.superclass
             info.superclass = path_name(node.superclass)
@@ -107,7 +107,10 @@ module SpinelTest
           name = stmt.name.to_s
           next if info.hidden&.include?(name)
 
-          info.methods << name if name.start_with?("test_") && !info.methods.include?(name)
+          next unless name.start_with?("test_")
+
+          info.methods << name unless info.methods.include?(name)
+          info.locations[name] = "#{@file}:#{stmt.location.start_line}" if @file
         end
       end
 
@@ -148,7 +151,8 @@ module SpinelTest
 
           files = chain.reverse.flat_map(&:files).uniq
           file = (targets && info.files.find { |f| targets.include?(f) }) || info.files.first
-          TestClass.new(name: info.name, methods: methods, file: file, files: files)
+          locations = chain.reverse.reduce({}) { |all, link| all.merge(link.locations) }
+          TestClass.new(name: info.name, methods: methods, file: file, files: files, locations: locations)
         end
       end
 

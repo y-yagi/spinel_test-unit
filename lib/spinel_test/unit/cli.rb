@@ -67,7 +67,7 @@ module SpinelTest
 
         Dir.mktmpdir("spinel_test-unit") do |dir|
           main = File.join(dir, "main.rb")
-          File.write(main, Generator.generate(entries))
+          File.write(main, Generator.generate(entries, @root))
           @ruby ? run_with_ruby(main, entries) : run_with_spinel(spinel, main, dir, entries)
         end
       end
@@ -159,6 +159,7 @@ module SpinelTest
           warn "spinel_test-unit: #{display(file)}: #{name} inherits from #{parent}, which is not defined in a scanned file; its tests are ignored"
         end
 
+        result.classes.each { |c| c.locations.transform_values! { |location| display(location) } }
         by_file = result.classes.group_by(&:file)
         order = []
         files.each do |file|
