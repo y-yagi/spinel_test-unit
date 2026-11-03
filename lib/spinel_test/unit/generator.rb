@@ -4,16 +4,18 @@ module SpinelTest
   module Unit
     module Generator
       # files: [{ require: "test/foo_test", classes: [TestClass, ...] }, ...]
-      def self.generate(files)
+      # root: the directory the failure locations are shown relative to.
+      def self.generate(files, root = "")
         out = +"require \"spinel_test/unit\"\n"
         files.each { |f| out << "require #{f[:require].dump}\n" }
         out << ARGV_PARSER
-        out << "runner = SpinelTest::Unit::Runner.new(filter)\n"
+        out << "runner = SpinelTest::Unit::Runner.new(filter, #{root.dump})\n"
         files.each do |f|
           f[:classes].each do |klass|
+            locations = klass.locations || {}
             klass.methods.each do |m|
               out << "t = #{klass.name}.new\n"
-              out << "runner.run(#{"#{klass.name}##{m}".dump}, t) { t.#{m} }\n"
+              out << "runner.run(#{"#{klass.name}##{m}".dump}, t, #{locations[m].to_s.dump}) { t.#{m} }\n"
             end
           end
         end

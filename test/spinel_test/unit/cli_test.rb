@@ -291,7 +291,7 @@ class CLITest < Test::Unit::TestCase
       out, err, status = run_cli(chdir: root)
       assert_equal 1, status.exitstatus, "stdout: #{out}\nstderr: #{err}"
       assert_include out, "3 tests, 2 assertions, 1 failures, 1 errors"
-      assert_include out, "first\nTeardown also raised: td boom"
+      assert_include out, "first\n    at test/a_test.rb:7\nTeardown also raised: td boom"
       assert_include out, "todo"
     end
   end
@@ -322,13 +322,13 @@ class CLITest < Test::Unit::TestCase
 
   def test_single_line_report_has_no_diff
     out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_single_line")
-    assert_include out, "Failure: ReportTest#test_single_line_has_no_diff\nExpected: \"one\"\n  Actual: \"two\"\n"
+    assert_include out, "Failure: ReportTest#test_single_line_has_no_diff\nExpected: \"one\"\n  Actual: \"two\"\n    at "
     assert_not_include out, "Diff:"
   end
 
   def test_new_assertion_messages
     out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "ReportTest")
-    assert_include out, "11 tests, 18 assertions, 10 failures, 0 errors"
+    assert_include out, "12 tests, 18 assertions, 10 failures, 1 errors"
     assert_include out, "Expected /a/ to match nil\n"
     assert_include out, "Expected /b+z/ to match \"abc\"\n"
     assert_include out, "Expected \"xyz\" to match \"abc\"\n"
@@ -337,5 +337,21 @@ class CLITest < Test::Unit::TestCase
     assert_include out, "[1, 2] includes 2\n"
     assert_include out, "Failed refutation, no message given.\n"
     assert_include out, "Failure: ReportTest#test_refute_message_fail\nshould differ\n"
+  end
+
+  # Spinel exceptions have no backtrace, so the report shows the test method's line.
+  def test_failure_report_shows_the_test_method_line
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_match_fail")
+    assert_include out, "Failure: ReportTest#test_match_fail\nExpected /b+z/ to match \"abc\"\n    at test/fixtures/reporting/report_test.rb:12\n"
+  end
+
+  def test_error_report_shows_the_test_method_line
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_error_in_helper")
+    assert_include out, "Error: ReportTest#test_error_in_helper\ndeep\n    at test/fixtures/reporting/report_test.rb:45\n"
+  end
+
+  def test_error_raised_only_in_teardown_shows_the_test_method_line
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "TeardownErrorTest")
+    assert_include out, "Error: TeardownErrorTest#test_body_passes\nteardown boom\n    at test/fixtures/reporting/frames_test.rb:18\n"
   end
 end

@@ -44,16 +44,24 @@ $ bundle exec spinel_test-unit --ruby          # run the same tests with the cur
 
 `--ruby` runs the generated main.rb with the Ruby that runs the CLI, with the same load paths (`-I`, `lib`, `test`, the project root) instead of compiling it; the child also inherits `RUBYOPT` and `RUBYLIB` (e.g. `bundler/setup`), so it may resolve requires that Spinel cannot. Use it to check that code which must work under both CRuby and Spinel behaves the same in each. The same tests run, with the same report format and exit status convention, but results can differ where CRuby and Spinel differ: Spinel freezes string literals (so `s = "a"; s << "b"` raises under Spinel but passes under `--ruby`), and exception messages can be worded differently.
 
-Output:
+Output when compiled with Spinel:
 
 ```
-..F
+.F
 
 Failure: CalcTest#test_failure_message
 1 + 1 should be 2
+    at test/calc_test.rb:14
 
-3 tests, 3 assertions, 1 failures, 0 errors
+2 tests, 2 assertions, 1 failures, 0 errors
 ```
+
+Each failure or error is `Failure: Class#test_name` or `Error: Class#test_name`, the message, and up to three `    at file:line` lines (paths relative to the project root):
+
+- Compiled with Spinel, exceptions have no backtrace, so there is one line: the `file:line` of the test method's `def`.
+- With `--ruby`, the lines are the backtrace entries outside this gem and the generated main.rb, so they point at the failing assertion in the test and the callers above it (a test helper, for example). The first entry is always kept, even from outside the project root (an exception raised inside another library shows where); after it only entries under the root are listed. A location equal to the previous line is left out (Ruby 4.0 attributes block-taking builtins such as `Array#each` to their caller's line). If nothing is left after filtering, it falls back to the test method's line.
+- An error raised in `setup`, or in `teardown` when the test itself passed, is reported with the same lines (under Spinel, the test method's `def`).
+- If a test method is defined more than once, the location of the last definition is used.
 
 When `assert_equal` fails on two Strings that both contain a newline, a line diff follows the Expected/Actual lines. `-` lines are only in the expected string, `+` lines only in the actual one, and unchanged lines more than two away from a change are collapsed into `...`. A single hidden line is shown as is. Lines that could be misread (empty, containing `\r`, starting with `"`, equal to `...`, or starting or ending with a space or tab) are shown with `inspect` (`- ""`, `- "a\r"`). Example:
 
@@ -69,6 +77,7 @@ Diff:
   d
   e
   f
+    at test/http_test.rb:7
 ```
 
 Very large differences are not diffed: when the lines between the common start and end of the two strings would need a table of over a million cells, the diff is replaced by a one-line note and the Expected/Actual lines remain.

@@ -115,7 +115,20 @@ class RuntimeCaseTest < Test::Unit::TestCase
   def test_teardown_error_after_failure_is_appended
     out = run_one("test_fail")
     assert_include out, "1 failures, 0 errors"
-    assert_include out, "first\nTeardown also raised: teardown boom"
+    assert_match(/first\n(    at .*\n)+Teardown also raised: teardown boom/, out)
+  end
+
+  def test_teardown_error_comes_after_the_location_of_the_failure
+    $stdout = out = StringIO.new
+    runner = SpinelTest::Unit::Runner.new("")
+    t = Hooks.new
+    failure = SpinelTest::Unit::AssertionFailedError.new("first")
+    failure.set_backtrace([])
+    runner.run("Hooks#test_fail", t, "t.rb:9") { raise failure }
+    runner.finish
+    assert_include out.string, "first\n    at t.rb:9\nTeardown also raised: teardown boom\n"
+  ensure
+    $stdout = STDOUT
   end
 
   def test_teardown_error_alone_is_an_error
@@ -245,6 +258,45 @@ class RuntimeCaseTest < Test::Unit::TestCase
     assert_equal 3, tc.assertions
   end
 
+  def report_for(name, location, &block)
+    runner = SpinelTest::Unit::Runner.new
+    out = StringIO.new
+    $stdout = out
+    runner.run(name, SpinelTest::Unit::TestCase.new, location, &block)
+    runner.finish
+    out.string
+  ensure
+    $stdout = STDOUT
+  end
+
+  def raise_in_helper
+    raise "deep"
+  end
+
+  def test_report_shows_framework_free_backtrace_frames
+    out = report_for("T#test_x", "t.rb:1") { raise_in_helper }
+    lines = out.lines.map(&:chomp)
+    at = lines.select { |line| line.start_with?("    at ") }
+    assert_operator at.size, :<=, SpinelTest::Unit::Runner::MAX_FRAMES
+    assert_match(/\A    at .*test_case_test\.rb:\d+\z/, at.first)
+    assert_not_include out, "/lib/spinel_test/unit/"
+    assert_not_include out, "    at t.rb:1\n"
+  end
+
+  def test_report_falls_back_to_the_test_location_without_a_backtrace
+    error = RuntimeError.new("boom")
+    error.set_backtrace([])
+    out = report_for("T#test_x", "t.rb:1") { raise error }
+    assert_include out, "Error: T#test_x\nboom\n    at t.rb:1\n"
+  end
+
+  def test_report_has_no_location_line_when_nothing_is_known
+    error = RuntimeError.new("boom")
+    error.set_backtrace([])
+    out = report_for("T#test_x", "") { raise error }
+    assert_not_include out, "    at "
+  end
+
   def test_assert_match_fails_for_a_subject_that_is_not_a_string
     tc = SpinelTest::Unit::TestCase.new
     assert_equal "Expected /a/ to match nil", failure_message { tc.assert_match(/a/, nil) }
@@ -274,5 +326,66 @@ class RuntimeCaseTest < Test::Unit::TestCase
     message = failure_message { SpinelTest::Unit::TestCase.new.assert_equal("é\nb".b, "é\nc") }
     assert_include message, "Expected:"
     assert_not_include message, "Diff:"
+  end
+
+  def test_errors_are_reported_where_they_were_raised
+    runner = SpinelTest::Unit::Runner.new("", "/proj")
+    error = ArgumentError.new("x")
+    error.set_backtrace(["/proj/test/a_test.rb:3:in 'helper'", "/proj/test/a_test.rb:3:in 'Array#each'",
+                         "/proj/test/a_test.rb:3:in 'Integer#times'", "/proj/test/a_test.rb:8:in 'test_a'",
+                         "/proj/test/a_test.rb:20:in 'run'", "/other/file.rb:1:in 'x'"])
+    assert_equal ["test/a_test.rb:3", "test/a_test.rb:8", "test/a_test.rb:20"], runner.report_frames(error, "test/a_test.rb:7")
+  end
+
+  def test_frames_inside_the_framework_are_left_out
+    runner = SpinelTest::Unit::Runner.new("", "/proj")
+    error = ArgumentError.new("x")
+    error.set_backtrace(["#{SpinelTest::Unit::Runner::FRAMEWORK_DIR}test_case.rb:1:in 'assert'", "/proj/t.rb:2:in 'test_a'"])
+    assert_equal ["t.rb:2"], runner.report_frames(error, "t.rb:1")
+  end
+
+  def test_the_first_frame_is_kept_even_outside_the_root
+    runner = SpinelTest::Unit::Runner.new("", "/proj")
+    error = ArgumentError.new("x")
+    error.set_backtrace(["/gems/uri/uri.rb:9:in 'parse'", "/gems/uri/uri.rb:20:in 'join'",
+                         "/proj/test/a_test.rb:5:in 'test_a'", "/gems/minitest.rb:1:in 'run'",
+                         "/proj/test/a_test.rb:30:in 'run'"])
+    assert_equal ["/gems/uri/uri.rb:9", "test/a_test.rb:5", "test/a_test.rb:30"], runner.report_frames(error, "test/a_test.rb:4")
+  end
+
+  def test_every_frame_counts_without_a_root
+    runner = SpinelTest::Unit::Runner.new("")
+    error = ArgumentError.new("x")
+    error.set_backtrace(["/gems/a.rb:1:in 'x'", "/other/b.rb:2:in 'y'"])
+    assert_equal ["/gems/a.rb:1", "/other/b.rb:2"], runner.report_frames(error, "t.rb:1")
+  end
+
+  class NoBacktraceError < StandardError
+    def backtrace
+      nil
+    end
+  end
+
+  def test_an_exception_without_a_backtrace_uses_the_test_location
+    runner = SpinelTest::Unit::Runner.new("", "/proj")
+    assert_equal ["t.rb:1"], runner.report_frames(NoBacktraceError.new("x"), "t.rb:1")
+  end
+
+  def test_the_test_location_is_used_without_a_backtrace
+    runner = SpinelTest::Unit::Runner.new("", "/proj")
+    error = ArgumentError.new("x")
+    error.set_backtrace([])
+    assert_equal ["t.rb:1"], runner.report_frames(error, "t.rb:1")
+  end
+
+  def test_error_raised_only_in_teardown_gets_a_location
+    $stdout = out = StringIO.new
+    runner = SpinelTest::Unit::Runner.new("")
+    t = Hooks.new
+    runner.run("Hooks#test_ok", t, "t.rb:9") { t.test_ok }
+    runner.finish
+    assert_include out.string, "Error: Hooks#test_ok\nteardown boom\n    at "
+  ensure
+    $stdout = STDOUT
   end
 end

@@ -112,13 +112,13 @@ class CLIRubyTest < Test::Unit::TestCase
 
   def test_single_line_report_has_no_diff
     out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_single_line")
-    assert_include out, "Failure: ReportTest#test_single_line_has_no_diff\nExpected: \"one\"\n  Actual: \"two\"\n"
+    assert_include out, "Failure: ReportTest#test_single_line_has_no_diff\nExpected: \"one\"\n  Actual: \"two\"\n    at "
     assert_not_include out, "Diff:"
   end
 
   def test_new_assertion_messages
     out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "ReportTest")
-    assert_include out, "11 tests, 18 assertions, 10 failures, 0 errors"
+    assert_include out, "12 tests, 18 assertions, 10 failures, 1 errors"
     assert_include out, "Expected /a/ to match nil\n"
     assert_include out, "Expected /b+z/ to match \"abc\"\n"
     assert_include out, "Expected \"xyz\" to match \"abc\"\n"
@@ -127,5 +127,50 @@ class CLIRubyTest < Test::Unit::TestCase
     assert_include out, "[1, 2] includes 2\n"
     assert_include out, "Failed refutation, no message given.\n"
     assert_include out, "Failure: ReportTest#test_refute_message_fail\nshould differ\n"
+  end
+
+  def test_failure_report_shows_the_failing_lines
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_match_fail")
+    assert_include out, "Failure: ReportTest#test_match_fail\nExpected /b+z/ to match \"abc\"\n    at test/fixtures/reporting/report_test.rb:13\n"
+  end
+
+  def test_error_report_shows_frames_outside_the_framework
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_error_in_helper")
+    expected = "Error: ReportTest#test_error_in_helper\ndeep\n" \
+               "    at test/fixtures/reporting/report_test.rb:42\n" \
+               "    at test/fixtures/reporting/report_test.rb:46\n"
+    assert_include out, expected
+    assert_not_include out, "main.rb"
+    assert_not_include out, "lib/spinel_test"
+  end
+
+  def test_repeated_locations_from_block_builtins_are_shown_once
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "FramesTest")
+    expected = "Error: FramesTest#test_error_in_block\nin block\n" \
+               "    at test/fixtures/reporting/frames_test.rb:5\n" \
+               "    at test/fixtures/reporting/frames_test.rb:9\n\n"
+    assert_include out, expected
+  end
+
+  def test_error_raised_only_in_teardown_shows_where
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "TeardownErrorTest")
+    assert_include out, "Error: TeardownErrorTest#test_body_passes\nteardown boom\n    at test/fixtures/reporting/frames_test.rb:15\n"
+  end
+
+  def test_locations_are_relative_to_the_root_not_the_working_directory
+    Dir.mktmpdir do |root|
+      write(root, "test/a_test.rb", <<~RUBY)
+        require "spinel_test/unit"
+        class ATest < SpinelTest::Unit::TestCase
+          def test_a
+            assert_equal 1, 2
+          end
+        end
+      RUBY
+      out, = Open3.capture3(RbConfig.ruby, "-I", File.expand_path("../../../lib", __dir__), "-e",
+                            "require 'spinel_test/unit/cli'; exit SpinelTest::Unit::CLI.start(['--ruby'], root: ARGV[0])", root,
+                            chdir: "/")
+      assert_include out, "    at test/a_test.rb:4\n"
+    end
   end
 end

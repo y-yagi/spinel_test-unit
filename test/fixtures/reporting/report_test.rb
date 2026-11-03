@@ -38,6 +38,14 @@ class ReportTest < SpinelTest::Unit::TestCase
     refute 1 == 1, "should differ"
   end
 
+  def raise_deep
+    raise ArgumentError, "deep"
+  end
+
+  def test_error_in_helper
+    raise_deep
+  end
+
   def test_new_assertions_pass
     assert_match(/b+/, "abbc")
     assert_match("bc", "abc")
