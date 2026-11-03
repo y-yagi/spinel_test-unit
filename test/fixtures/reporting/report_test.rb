@@ -1,6 +1,14 @@
 require "spinel_test/unit"
 
 class ReportTest < SpinelTest::Unit::TestCase
+  def test_multiline_diff
+    assert_equal "alpha\nbeta\ngamma\ndelta\nepsilon\nzeta\neta\ntheta", "alpha\nbeta\nGAMMA\ndelta\nepsilon\nzeta\neta\ntheta"
+  end
+
+  def test_single_line_has_no_diff
+    assert_equal "one", "two"
+  end
+
   def test_match_fail
     assert_match(/b+z/, "abc")
   end

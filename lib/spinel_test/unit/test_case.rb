@@ -39,6 +39,7 @@ module SpinelTest
         return true if expected == actual
 
         msg = "Expected: #{expected.inspect}\n  Actual: #{actual.inspect}"
+        msg += diff_section(expected, actual)
         msg = message + "\n" + msg if message
         raise AssertionFailedError, msg
       end
@@ -117,6 +118,18 @@ module SpinelTest
       end
 
       private
+
+      def diff_section(expected, actual)
+        return "" unless multiline_strings?(expected, actual)
+
+        "\nDiff:\n" + Diff.lines(expected, actual)
+      rescue ArgumentError, EncodingError
+        ""
+      end
+
+      def multiline_strings?(expected, actual)
+        expected.is_a?(String) && actual.is_a?(String) && expected.include?("\n") && actual.include?("\n")
+      end
 
       def pattern_matches?(pattern, string)
         return false unless string.is_a?(String)

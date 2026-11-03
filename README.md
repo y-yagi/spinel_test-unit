@@ -55,6 +55,24 @@ Failure: CalcTest#test_failure_message
 3 tests, 3 assertions, 1 failures, 0 errors
 ```
 
+When `assert_equal` fails on two Strings that both contain a newline, a line diff follows the Expected/Actual lines. `-` lines are only in the expected string, `+` lines only in the actual one, and unchanged lines more than two away from a change are collapsed into `...`. A single hidden line is shown as is. Lines that could be misread (empty, containing `\r`, starting with `"`, equal to `...`, or starting or ending with a space or tab) are shown with `inspect` (`- ""`, `- "a\r"`). Example:
+
+```
+Failure: HttpTest#test_to_cgi
+Expected: "a\nb\nc\nd\ne\nf"
+  Actual: "a\nb\nX\nd\ne\nf"
+Diff:
+  a
+  b
+- c
++ X
+  d
+  e
+  f
+```
+
+Very large differences are not diffed: when the lines between the common start and end of the two strings would need a table of over a million cells, the diff is replaced by a one-line note and the Expected/Actual lines remain.
+
 Available assertions:
 
 - `assert(test, message = nil)`

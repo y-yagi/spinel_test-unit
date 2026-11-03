@@ -315,9 +315,20 @@ class CLITest < Test::Unit::TestCase
     end
   end
 
+  def test_multiline_diff_report
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_multiline_diff")
+    assert_include out, "Diff:\n  alpha\n  beta\n- gamma\n+ GAMMA\n  delta\n  epsilon\n  ...\n"
+  end
+
+  def test_single_line_report_has_no_diff
+    out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "test_single_line")
+    assert_include out, "Failure: ReportTest#test_single_line_has_no_diff\nExpected: \"one\"\n  Actual: \"two\"\n"
+    assert_not_include out, "Diff:"
+  end
+
   def test_new_assertion_messages
     out, _err, _status = run_cli(File.join(FIXTURES, "reporting"), "-n", "ReportTest")
-    assert_include out, "9 tests, 16 assertions, 8 failures, 0 errors"
+    assert_include out, "11 tests, 18 assertions, 10 failures, 0 errors"
     assert_include out, "Expected /a/ to match nil\n"
     assert_include out, "Expected /b+z/ to match \"abc\"\n"
     assert_include out, "Expected \"xyz\" to match \"abc\"\n"
