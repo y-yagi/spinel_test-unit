@@ -39,7 +39,7 @@ class CLIRubyTest < Test::Unit::TestCase
   def test_passing_fixture_exits_zero
     out, err, status = run_cli(File.join(FIXTURES, "passing"))
     assert_true status.success?, "stdout: #{out}\nstderr: #{err}"
-    assert_include out, "6 tests, 13 assertions, 0 failures, 0 errors"
+    assert_include out, "6 tests, 15 assertions, 0 failures, 0 errors"
     assert_equal "", err
   end
 

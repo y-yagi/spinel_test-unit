@@ -93,7 +93,7 @@ Available assertions:
 - `assert_include(collection, item, message = nil)` (`assert_includes` is an alias)
 - `assert_not_include(collection, item, message = nil)`
 - `refute(test, message = nil)`
-- `assert_raise(klass) { ... }` (passes for `klass` or a subclass; returns the exception; assertion failures raised inside the block propagate)
+- `assert_raise(klass, match: nil) { ... }` (passes for `klass` or a subclass; returns the exception; assertion failures raised inside the block propagate). With `match:`, the exception's message must also match it, as in `assert_match` (a Regexp, or a String meaning a substring)
 
 `setup` and `teardown` hooks are supported.
 

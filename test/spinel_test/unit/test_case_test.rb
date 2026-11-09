@@ -163,6 +163,31 @@ class RuntimeCaseTest < Test::Unit::TestCase
     assert_equal "x", e.message
   end
 
+  def test_assert_raise_checks_message
+    tc = SpinelTest::Unit::TestCase.new
+    e = tc.assert_raise(ArgumentError, match: "bad") { raise ArgumentError, "bad" }
+    assert_equal "bad", e.message
+    e = tc.assert_raise(ArgumentError, match: "ad") { raise ArgumentError, "bad" }
+    assert_equal "bad", e.message
+    e = tc.assert_raise(ArgumentError, match: /^ba/) { raise ArgumentError, "bad" }
+    assert_equal "bad", e.message
+
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise(ArgumentError, match: ".") { raise ArgumentError, "bad" }
+    end
+    assert_equal "Expected ArgumentError with a message matching \".\" but got \"bad\"", e.message
+
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise(ArgumentError, match: /x/) { raise ArgumentError, "bad" }
+    end
+    assert_equal "Expected ArgumentError with a message matching /x/ but got \"bad\"", e.message
+
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise(ArgumentError, match: "bad") { raise TypeError, "bad" }
+    end
+    assert_equal "Expected ArgumentError but got TypeError", e.message
+  end
+
   def test_assert_includes_uses_message
     tc = SpinelTest::Unit::TestCase.new
     e = assert_raise(SpinelTest::Unit::AssertionFailedError) { tc.assert_includes [1], 2, "custom" }

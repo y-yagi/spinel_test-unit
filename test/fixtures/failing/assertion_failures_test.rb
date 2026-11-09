@@ -41,4 +41,12 @@ class AssertionFailuresTest < SpinelTest::Unit::TestCase
   def test_raise_nothing
     assert_raise(ArgumentError) { 1 + 1 }
   end
+
+  def test_raise_wrong_message
+    assert_raise(ArgumentError, match: "good") { raise ArgumentError, "bad" }
+  end
+
+  def test_raise_message_not_matching
+    assert_raise(ArgumentError, match: /good/) { raise ArgumentError, "bad" }
+  end
 end

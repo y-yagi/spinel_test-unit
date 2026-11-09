@@ -21,5 +21,7 @@ class AssertionsTest < SpinelTest::Unit::TestCase
     e = assert_raise(ArgumentError) { raise ArgumentError, "bad" }
     assert_equal "bad", e.message
     assert_raise(StandardError) { raise ArgumentError, "subclass" }
+    assert_raise(ArgumentError, match: "ad") { raise ArgumentError, "bad" }
+    assert_raise(ArgumentError, match: /ba/) { raise ArgumentError, "bad" }
   end
 end

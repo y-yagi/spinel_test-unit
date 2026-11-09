@@ -102,7 +102,7 @@ module SpinelTest
         raise AssertionFailedError, msg
       end
 
-      def assert_raise(klass)
+      def assert_raise(klass, match: nil)
         @assertions += 1
         begin
           yield
@@ -110,9 +110,10 @@ module SpinelTest
           # a failed assertion inside the block is not "the expected error"
           raise e
         rescue StandardError => e
-          return e if e.is_a?(klass)
+          raise AssertionFailedError, "Expected #{klass} but got #{e.class}" unless e.is_a?(klass)
+          return e if match.nil? || pattern_matches?(match, e.message)
 
-          raise AssertionFailedError, "Expected #{klass} but got #{e.class}"
+          raise AssertionFailedError, "Expected #{klass} with a message matching #{match.inspect} but got #{e.message.inspect}"
         end
         raise AssertionFailedError, "Expected #{klass} but nothing was raised"
       end

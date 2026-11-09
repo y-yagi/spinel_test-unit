@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Add `match:` to `assert_raise` to check the exception message, as in `assert_match` (a Regexp, or a String meaning a substring)
+
 ## 0.2.0
 
 * Report where a test failed: `at file:line` lines after the message (the test method's line with Spinel, the filtered backtrace with `--ruby`)
