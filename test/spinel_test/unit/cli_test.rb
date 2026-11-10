@@ -150,7 +150,9 @@ class CLITest < Test::Unit::TestCase
 
   def test_library_base_requires_follow_cycles_and_missing_files
     Dir.mktmpdir do |root|
-      write(root, "ext/lib_a.rb", "require \"lib_b\"\nrequire \"nonexistent_zzz\"\nrequire \"spinel_test/unit\"\nclass LibA < SpinelTest::Unit::TestCase\nend\n")
+      # LibA is defined before the cyclic require, as CRuby needs: lib_b's
+      # `require "lib_a"` is skipped while lib_a is still loading
+      write(root, "ext/lib_a.rb", "require \"spinel_test/unit\"\nclass LibA < SpinelTest::Unit::TestCase\nend\nrequire \"lib_b\"\nrequire \"nonexistent_zzz\"\n")
       write(root, "ext/lib_b.rb", "require \"lib_a\"\nclass LibB < LibA\n  def test_b; assert true; end\nend\n")
       write(root, "test/t_test.rb", "require \"lib_b\"\nclass TTest < LibB\n  def test_t; assert true; end\nend\n")
       out, err, status = run_cli("-I", "ext", chdir: root)
