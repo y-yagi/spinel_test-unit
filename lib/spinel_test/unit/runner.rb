@@ -6,9 +6,10 @@ module SpinelTest
       MAX_FRAMES = 3
       FRAMEWORK_DIR = File.dirname(File.expand_path(__FILE__)) + "/"
 
-      def initialize(filter = "", root = "")
+      def initialize(filter = "", root = "", testcase = "")
         @filter = filter
         @root = root
+        @testcase = testcase
         @tests = 0
         @assertions = 0
         @failures = 0
@@ -17,7 +18,20 @@ module SpinelTest
       end
 
       def selected?(name)
-        @filter == "" || name.include?(@filter)
+        index = name.index("#")
+        klass = index ? name[0, index] : name
+        matches?(@testcase, klass, true) && matches?(@filter, name, false)
+      end
+
+      def matches?(filter, text, exact)
+        return true if filter == ""
+        return Regexp.new(filter[1, filter.length - 2]).match?(text) if pattern?(filter)
+
+        exact ? text == filter : text.include?(filter)
+      end
+
+      def pattern?(filter)
+        filter.length >= 2 && filter.start_with?("/") && filter.end_with?("/")
       end
 
       # Runs one test: setup, the block (which calls the test method), teardown.
@@ -120,6 +134,13 @@ module SpinelTest
         e.is_a?(SystemExit) || e.is_a?(Interrupt)
       end
 
+      def filter_description
+        parts = []
+        parts.push("testcase: " + @testcase) if @testcase != ""
+        parts.push("filter: " + @filter) if @filter != ""
+        parts.empty? ? "" : " (" + parts.join(", ") + ")"
+      end
+
       def passed?
         @failures == 0 && @errors == 0
       end
@@ -138,7 +159,7 @@ module SpinelTest
         puts ""
         puts summary
         if @tests == 0
-          puts "No tests were run#{@filter == "" ? "" : " (filter: " + @filter + ")"}"
+          puts "No tests were run#{filter_description}"
           return 1
         end
         passed? ? 0 : 1

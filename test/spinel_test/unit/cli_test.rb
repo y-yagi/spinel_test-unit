@@ -71,6 +71,16 @@ class CLITest < Test::Unit::TestCase
     assert_include out, "1 tests, 1 assertions, 0 failures, 0 errors"
   end
 
+  def test_testcase_and_regexp_filters
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "-t", "FooTest")
+    assert_true status.success?
+    assert_include out, "2 tests, 2 assertions, 0 failures, 0 errors"
+
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "-t", "/Foo/", "-n", "/#test_a\\z/")
+    assert_true status.success?
+    assert_include out, "2 tests, 2 assertions, 0 failures, 0 errors"
+  end
+
   def test_no_match_filter_exits_one
     out, _err, status = run_cli(File.join(FIXTURES, "passing"), "-n", "nomatch_zzz")
     assert_equal 1, status.exitstatus
@@ -136,6 +146,18 @@ class CLITest < Test::Unit::TestCase
     _out, err, status = run_cli("-n")
     assert_equal 2, status.exitstatus
     assert_include err, "-n requires a value"
+  end
+
+  def test_missing_testcase_value
+    _out, err, status = run_cli("-t")
+    assert_equal 2, status.exitstatus
+    assert_include err, "-t requires a value"
+  end
+
+  def test_invalid_regexp
+    _out, err, status = run_cli("-n", "/(/")
+    assert_equal 2, status.exitstatus
+    assert_include err, "invalid regexp /(/"
   end
 
   def test_unknown_option

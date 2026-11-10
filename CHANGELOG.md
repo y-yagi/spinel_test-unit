@@ -2,6 +2,8 @@
 
 * Add `match:` to `assert_raise` to check the exception message, as in `assert_match` (a Regexp, or a String meaning a substring)
 * `assert_raise` passes only for the given class itself, not a subclass, as in test-unit. Use the new `assert_raise_kind_of` to also accept a subclass
+* Add `-t`/`--testcase CLASS` to run only the tests of the class named exactly CLASS (`-n FooTest#` also selects `MyFooTest`)
+* `-n` and `-t` take a regexp written as `/regexp/`, as in test-unit
 
 ## 0.2.0
 

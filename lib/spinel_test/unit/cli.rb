@@ -10,7 +10,7 @@ require_relative "toolchain"
 
 module SpinelTest
   module Unit
-    # spinel_test-unit [PATH...] [-n NAME] [-I DIR] [--ruby]
+    # spinel_test-unit [PATH...] [-n NAME] [-t CLASS] [-I DIR] [--ruby]
     #
     # Scans the test files with Prism, generates a main.rb that calls every
     # test, compiles it with Spinel and runs the binary. With --ruby it runs the
@@ -25,6 +25,7 @@ module SpinelTest
         @root = File.expand_path(root)
         @paths = []
         @filter = nil
+        @testcase = nil
         @keep = false
         @ruby = false
         @includes = []
@@ -33,13 +34,17 @@ module SpinelTest
       end
 
       USAGE = <<~TEXT
-        Usage: spinel_test-unit [PATH...] [-n NAME] [-I DIR] [--ruby]
+        Usage: spinel_test-unit [PATH...] [-n NAME] [-t CLASS] [-I DIR] [--ruby]
 
         Compiles the tests with Spinel and runs them (with --ruby, runs them with the
         current Ruby instead).
 
           PATH             test file or directory (default: test)
-          -n, --name NAME  run only the tests whose "Class#test_name" includes NAME
+          -n, --name NAME  run only the tests whose "Class#test_name" includes NAME,
+                           or matches it when NAME is /regexp/
+          -t, --testcase CLASS
+                           run only the tests of the class named CLASS (exact match),
+                           or whose class name matches it when CLASS is /regexp/
           -I DIR           add DIR to the load path (repeatable)
           --ruby           run with the current Ruby instead of compiling with Spinel
           -h, --help       show this help
@@ -93,7 +98,9 @@ module SpinelTest
       end
 
       def run_command(command)
-        args = @filter ? ["-n", @filter] : []
+        args = []
+        args += ["-n", @filter] if @filter
+        args += ["-t", @testcase] if @testcase
         system(*command, *args) ? 0 : ($?.exitstatus || 1)
       end
 
@@ -106,22 +113,42 @@ module SpinelTest
             @exit = 0
             return
           when "-n", "--name"
-            if args.empty?
-              return usage_error("#{arg} requires a value")
-            end
+            return usage_error("#{arg} requires a value") if args.empty?
+
             @filter = args.shift
+            return unless valid_pattern?(@filter)
+          when "-t", "--testcase"
+            return usage_error("#{arg} requires a value") if args.empty?
+
+            @testcase = args.shift
+            return unless valid_pattern?(@testcase)
           when "--ruby" then @ruby = true
           when "-I"
             return usage_error("-I requires a value") if args.empty?
 
             @includes << File.expand_path(args.shift, @root)
           when /\A-I(.+)\z/ then @includes << File.expand_path($1, @root)
-          when /\A--name=(.*)\z/ then @filter = $1
+          when /\A--name=(.*)\z/
+            @filter = $1
+            return unless valid_pattern?(@filter)
+          when /\A--testcase=(.*)\z/
+            @testcase = $1
+            return unless valid_pattern?(@testcase)
           when "--" then @paths.concat(args.shift(args.size))
           when /\A-/ then return usage_error("unknown option: #{arg}")
           else @paths << arg
           end
         end
+      end
+
+      def valid_pattern?(value)
+        return true unless value.length >= 2 && value.start_with?("/") && value.end_with?("/")
+
+        Regexp.new(value[1..-2])
+        true
+      rescue RegexpError => e
+        usage_error("invalid regexp #{value}: #{e.message}")
+        false
       end
 
       def usage_error(message)

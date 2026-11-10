@@ -9,7 +9,7 @@ module SpinelTest
         out = +"require \"spinel_test/unit\"\n"
         files.each { |f| out << "require #{f[:require].dump}\n" }
         out << ARGV_PARSER
-        out << "runner = SpinelTest::Unit::Runner.new(filter, #{root.dump})\n"
+        out << "runner = SpinelTest::Unit::Runner.new(filter, #{root.dump}, testcase)\n"
         files.each do |f|
           f[:classes].each do |klass|
             locations = klass.locations || {}
@@ -25,10 +25,14 @@ module SpinelTest
 
       ARGV_PARSER = <<~RUBY
         filter = ""
+        testcase = ""
         i = 0
         while i < ARGV.length
           if ARGV[i] == "-n" && i + 1 < ARGV.length
             filter = ARGV[i + 1]
+            i += 1
+          elsif ARGV[i] == "-t" && i + 1 < ARGV.length
+            testcase = ARGV[i + 1]
             i += 1
           end
           i += 1
