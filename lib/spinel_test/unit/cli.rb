@@ -26,7 +26,6 @@ module SpinelTest
         @paths = []
         @filter = nil
         @testcase = nil
-        @keep = false
         @ruby = false
         @includes = []
         @exit = nil
@@ -272,7 +271,13 @@ module SpinelTest
 
       def compile(spinel, main, bin, entries)
         cmd = [spinel] + Toolchain.compile_flags + include_dirs(entries).flat_map { |d| ["-I", d] } + [main, "-o", bin]
-        output, status = Open3.capture2e(*cmd)
+        begin
+          output, status = Open3.capture2e(*cmd)
+        rescue SystemCallError => e
+          hint = ENV["SPINEL"].to_s.empty? ? "" : " (check SPINEL)"
+          warn "spinel_test-unit: cannot run Spinel: #{e.message}#{hint}"
+          return false
+        end
         unless status.success?
           warn output unless output.empty?
           warn "spinel_test-unit: compilation failed (#{cmd.join(" ")})"

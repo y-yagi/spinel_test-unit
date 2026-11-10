@@ -59,8 +59,12 @@ module SpinelTest
       end
 
       def ambiguous?(line)
-        line == "" || line == "..." || line.include?("\r") || line.start_with?("\"") ||
+        line == "" || line == "..." || control?(line) || line.start_with?("\"") ||
           line.start_with?(" ", "\t") || line.end_with?(" ", "\t")
+      end
+
+      def control?(line)
+        line.bytes.any? { |b| (b < 32 && b != 9) || b == 127 }
       end
 
       def edits
