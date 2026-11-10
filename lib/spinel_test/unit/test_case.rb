@@ -38,55 +38,42 @@ module SpinelTest
         @assertions += 1
         return true if expected == actual
 
-        msg = "Expected: #{expected.inspect}\n  Actual: #{actual.inspect}"
-        msg += diff_section(expected, actual)
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("Expected: #{expected.inspect}\n  Actual: #{actual.inspect}" + diff_section(expected, actual), message)
       end
 
       def assert_not_equal(expected, actual, message = nil)
         @assertions += 1
         return true unless expected == actual
 
-        msg = "Expected #{actual.inspect} not to equal #{expected.inspect}"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("Expected #{actual.inspect} not to equal #{expected.inspect}", message)
       end
 
       def assert_match(pattern, string, message = nil)
         @assertions += 1
         return true if pattern_matches?(pattern, string)
 
-        msg = "Expected #{pattern.inspect} to match #{string.inspect}"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("Expected #{pattern.inspect} to match #{string.inspect}", message)
       end
 
       def assert_nil(value, message = nil)
         @assertions += 1
         return true if value.nil?
 
-        msg = "Expected nil, got #{value.inspect}"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("Expected nil, got #{value.inspect}", message)
       end
 
       def assert_not_nil(value, message = nil)
         @assertions += 1
         return true unless value.nil?
 
-        msg = "Expected a value other than nil"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("Expected a value other than nil", message)
       end
 
       def assert_include(collection, item, message = nil)
         @assertions += 1
         return true if collection.include?(item)
 
-        msg = "#{collection.inspect} does not include #{item.inspect}"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("#{collection.inspect} does not include #{item.inspect}", message)
       end
 
       def assert_includes(collection, item, message = nil)
@@ -97,9 +84,7 @@ module SpinelTest
         @assertions += 1
         return true unless collection.include?(item)
 
-        msg = "#{collection.inspect} includes #{item.inspect}"
-        msg = message + "\n" + msg if message
-        raise AssertionFailedError, msg
+        failure("#{collection.inspect} includes #{item.inspect}", message)
       end
 
       def assert_raise(klass, match: nil)
@@ -128,6 +113,10 @@ module SpinelTest
       end
 
       private
+
+      def failure(text, message)
+        raise AssertionFailedError, message ? message + "\n" + text : text
+      end
 
       def expected_exception(e, klass, match, class_matches)
         raise AssertionFailedError, "Expected #{klass} but got #{e.class}" unless class_matches

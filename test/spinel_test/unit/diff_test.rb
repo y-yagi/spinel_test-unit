@@ -71,6 +71,15 @@ class DiffTest < Test::Unit::TestCase
     assert_equal "- \"a\\r\"\n+ a\n  b", diff("a\r\nb", "a\nb")
   end
 
+  def test_lines_with_control_characters_are_inspected
+    assert_equal "- \"\\e[31mred\"\n+ red\n  b", diff("\e[31mred\nb", "red\nb")
+    assert_equal "- \"a\\u0000\"\n+ a\n  b", diff("a\0\nb", "a\nb")
+  end
+
+  def test_tabs_inside_a_line_are_shown_as_is
+    assert_equal "- a\tb\n+ a b\n  c", diff("a\tb\nc", "a b\nc")
+  end
+
   def test_empty_lines_are_inspected
     assert_equal "  a\n- \"\"\n  b\n  \"\"", diff("a\n\nb\n", "a\nb\n")
   end

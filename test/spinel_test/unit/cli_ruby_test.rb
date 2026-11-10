@@ -50,6 +50,15 @@ class CLIRubyTest < Test::Unit::TestCase
     assert_include err, "Spinel not found"
   end
 
+  def test_spinel_path_that_cannot_be_run
+    _out, err, status = Open3.capture3(NO_SPINEL_ENV.merge("SPINEL" => "/no/such/spinel"), RbConfig.ruby, EXE,
+                                       File.join(FIXTURES, "passing"), chdir: File.expand_path("../../..", __dir__))
+    assert_equal 1, status.exitstatus
+    assert_include err, "spinel_test-unit: cannot run Spinel: No such file or directory"
+    assert_include err, "/no/such/spinel (check SPINEL)"
+    assert_not_include err, "from "
+  end
+
   def test_failing_fixture_reports_each_case
     out, _err, status = run_cli(File.join(FIXTURES, "failing"), "-n", "BrokenTest")
     assert_equal 1, status.exitstatus
