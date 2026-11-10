@@ -38,6 +38,18 @@ class AssertionFailuresTest < SpinelTest::Unit::TestCase
     assert_raise(ArgumentError) { raise TypeError, "t" }
   end
 
+  def test_raise_subclass
+    assert_raise(StandardError) { raise ArgumentError, "s" }
+  end
+
+  def test_raise_kind_of_wrong_class
+    assert_raise_kind_of(ArgumentError) { raise TypeError, "t" }
+  end
+
+  def test_raise_kind_of_nothing
+    assert_raise_kind_of(TypeError) { 1 + 1 }
+  end
+
   def test_raise_nothing
     assert_raise(ArgumentError) { 1 + 1 }
   end
