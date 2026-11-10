@@ -110,15 +110,31 @@ module SpinelTest
           # a failed assertion inside the block is not "the expected error"
           raise e
         rescue StandardError => e
-          raise AssertionFailedError, "Expected #{klass} but got #{e.class}" unless e.is_a?(klass)
-          return e if match.nil? || pattern_matches?(match, e.message)
+          return expected_exception(e, klass, match, e.instance_of?(klass))
+        end
+        raise AssertionFailedError, "Expected #{klass} but nothing was raised"
+      end
 
-          raise AssertionFailedError, "Expected #{klass} with a message matching #{match.inspect} but got #{e.message.inspect}"
+      def assert_raise_kind_of(klass, match: nil)
+        @assertions += 1
+        begin
+          yield
+        rescue AssertionFailedError => e
+          raise e
+        rescue StandardError => e
+          return expected_exception(e, klass, match, e.is_a?(klass))
         end
         raise AssertionFailedError, "Expected #{klass} but nothing was raised"
       end
 
       private
+
+      def expected_exception(e, klass, match, class_matches)
+        raise AssertionFailedError, "Expected #{klass} but got #{e.class}" unless class_matches
+        return e if match.nil? || pattern_matches?(match, e.message)
+
+        raise AssertionFailedError, "Expected #{klass} with a message matching #{match.inspect} but got #{e.message.inspect}"
+      end
 
       def diff_section(expected, actual)
         return "" unless multiline_strings?(expected, actual)

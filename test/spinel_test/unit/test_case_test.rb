@@ -159,8 +159,46 @@ class RuntimeCaseTest < Test::Unit::TestCase
 
   def test_assert_raise_still_returns_matching_error
     tc = SpinelTest::Unit::TestCase.new
-    e = tc.assert_raise(StandardError) { raise ArgumentError, "x" }
+    e = tc.assert_raise(ArgumentError) { raise ArgumentError, "x" }
     assert_equal "x", e.message
+  end
+
+  def test_assert_raise_rejects_a_subclass
+    tc = SpinelTest::Unit::TestCase.new
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise(StandardError) { raise ArgumentError, "x" }
+    end
+    assert_equal "Expected StandardError but got ArgumentError", e.message
+  end
+
+  def test_assert_raise_kind_of_accepts_a_subclass
+    tc = SpinelTest::Unit::TestCase.new
+    e = tc.assert_raise_kind_of(StandardError) { raise ArgumentError, "x" }
+    assert_equal ArgumentError, e.class
+    e = tc.assert_raise_kind_of(ArgumentError, match: /x/) { raise ArgumentError, "x" }
+    assert_equal "x", e.message
+    assert_equal 2, tc.assertions
+
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise_kind_of(ArgumentError) { raise TypeError, "t" }
+    end
+    assert_equal "Expected ArgumentError but got TypeError", e.message
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise_kind_of(ArgumentError, match: "y") { raise ArgumentError, "x" }
+    end
+    assert_equal "Expected ArgumentError with a message matching \"y\" but got \"x\"", e.message
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise_kind_of(ArgumentError) { 1 + 1 }
+    end
+    assert_equal "Expected ArgumentError but nothing was raised", e.message
+  end
+
+  def test_assert_raise_kind_of_lets_assertion_failures_propagate
+    tc = SpinelTest::Unit::TestCase.new
+    e = assert_raise(SpinelTest::Unit::AssertionFailedError) do
+      tc.assert_raise_kind_of(StandardError) { tc.assert_equal 1, 2 }
+    end
+    assert_equal "Expected: 1\n  Actual: 2", e.message
   end
 
   def test_assert_raise_checks_message

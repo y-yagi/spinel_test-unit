@@ -31,13 +31,13 @@ class CLITest < Test::Unit::TestCase
   def test_passing_fixture_exits_zero
     out, err, status = run_cli(File.join(FIXTURES, "passing"))
     assert_true status.success?, "stdout: #{out}\nstderr: #{err}"
-    assert_include out, "6 tests, 15 assertions, 0 failures, 0 errors"
+    assert_include out, "6 tests, 17 assertions, 0 failures, 0 errors"
   end
 
   def test_failing_fixture_exits_one
     out, _err, status = run_cli(File.join(FIXTURES, "failing"))
     assert_equal 1, status.exitstatus
-    assert_include out, "15 tests, 14 assertions, 13 failures, 1 errors"
+    assert_include out, "18 tests, 17 assertions, 16 failures, 1 errors"
     assert_include out, "Failure: BrokenTest#test_failure"
     assert_include out, "math is broken"
     assert_include out, "Error: BrokenTest#test_error"
@@ -47,7 +47,7 @@ class CLITest < Test::Unit::TestCase
   def test_assertion_failure_messages
     out, _err, status = run_cli(File.join(FIXTURES, "failing"), "-n", "AssertionFailuresTest")
     assert_equal 1, status.exitstatus
-    assert_include out, "12 tests, 12 assertions, 12 failures, 0 errors"
+    assert_include out, "15 tests, 15 assertions, 15 failures, 0 errors"
     assert_include out, "Failure: AssertionFailuresTest#test_equal_ints\nExpected: 1\n  Actual: 2"
     assert_include out, "custom equal\nExpected: 1\n  Actual: 2"
     assert_include out, "Expected: 1\n  Actual: nil"
@@ -56,7 +56,10 @@ class CLITest < Test::Unit::TestCase
     assert_include out, "Expected nil, got 42"
     assert_include out, "custom nil\nExpected nil, got \"x\""
     assert_include out, "[1, 2] does not include 3"
-    assert_include out, "Expected ArgumentError but got TypeError"
+    assert_include out, "Failure: AssertionFailuresTest#test_raise_wrong_class\nExpected ArgumentError but got TypeError"
+    assert_include out, "Failure: AssertionFailuresTest#test_raise_subclass\nExpected StandardError but got ArgumentError"
+    assert_include out, "Failure: AssertionFailuresTest#test_raise_kind_of_wrong_class\nExpected ArgumentError but got TypeError"
+    assert_include out, "Failure: AssertionFailuresTest#test_raise_kind_of_nothing\nExpected TypeError but nothing was raised"
     assert_include out, "Expected ArgumentError but nothing was raised"
     assert_include out, "Expected ArgumentError with a message matching \"good\" but got \"bad\""
     assert_include out, "Expected ArgumentError with a message matching /good/ but got \"bad\""

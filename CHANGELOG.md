@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Add `match:` to `assert_raise` to check the exception message, as in `assert_match` (a Regexp, or a String meaning a substring)
+* `assert_raise` passes only for the given class itself, not a subclass, as in test-unit. Use the new `assert_raise_kind_of` to also accept a subclass
 
 ## 0.2.0
 
