@@ -39,6 +39,9 @@ end
 $ bundle exec spinel_test-unit                 # test/**/*_test.rb and test/**/test_*.rb
 $ bundle exec spinel_test-unit test/calc_test.rb
 $ bundle exec spinel_test-unit -n test_add     # only tests whose "Class#method" name includes it
+$ bundle exec spinel_test-unit -n '/#test_add\z/'  # or matches the regexp
+$ bundle exec spinel_test-unit -t CalcTest     # only the tests of the class named exactly CalcTest
+$ bundle exec spinel_test-unit -t '/\ACalc/'   # or of the classes whose name matches the regexp
 $ bundle exec spinel_test-unit --ruby          # run the same tests with the current Ruby, no Spinel needed
 ```
 

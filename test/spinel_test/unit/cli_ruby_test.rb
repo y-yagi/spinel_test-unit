@@ -64,6 +64,30 @@ class CLIRubyTest < Test::Unit::TestCase
     assert_include out, "1 tests, 1 assertions, 0 failures, 0 errors"
   end
 
+  def test_testcase_filter_is_an_exact_match
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "-t", "FooTest")
+    assert_true status.success?
+    assert_include out, "2 tests, 2 assertions, 0 failures, 0 errors"
+  end
+
+  def test_name_filter_as_regexp
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "-n", "/\\A(Foo|Bar)Test#test_a\\z/")
+    assert_true status.success?
+    assert_include out, "2 tests, 2 assertions, 0 failures, 0 errors"
+  end
+
+  def test_testcase_regexp_and_name_filter
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "--testcase=/Foo/", "--name=test_a")
+    assert_true status.success?
+    assert_include out, "2 tests, 2 assertions, 0 failures, 0 errors"
+  end
+
+  def test_testcase_matching_nothing_fails
+    out, _err, status = run_cli(File.join(FIXTURES, "filtering"), "-t", "Foo", "-n", "test_a")
+    assert_equal 1, status.exitstatus
+    assert_include out, "No tests were run (testcase: Foo, filter: test_a)"
+  end
+
   def test_include_dirs_are_on_the_load_path
     Dir.mktmpdir do |root|
       write(root, "extlib/shared_helper.rb", "SHARED_VALUE = 42\n")
